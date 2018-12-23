@@ -6,7 +6,15 @@ class AcceptController {
   async create (req, res) {
     const { id } = req.params
 
-    const purchase = await Purchase.findById(id)
+    const purchase = await Purchase.findById(id).populate('ad')
+    console.log('Author Id', purchase.ad.author)
+    console.log('Session user Id', req.userId)
+
+    if (parseInt(purchase.ad.author) !== parseInt(req.userId)) {
+      return res.json({
+        error: 'Você não pode aceitar esta compra, pois não é o author'
+      })
+    }
 
     if (!purchase) {
       return res.json({ error: 'Essa intenção não existe mais' })
@@ -37,15 +45,16 @@ class AcceptController {
   }
 
   async list (req, res) {
-    const reports = await Report.paginate(
-      {},
-      {
-        page: req.query.page || 1,
-        limit: 20,
-        sort: '-createdAt',
-        populate: [['purchasedBy'], ['author']]
-      }
-    )
+    const filters = {}
+
+    filters.author = req.userId
+
+    const reports = await Report.paginate(filters, {
+      page: req.query.page || 1,
+      limit: 20,
+      sort: '-createdAt',
+      populate: [['purchasedBy'], ['author']]
+    })
 
     return res.json(reports)
   }
